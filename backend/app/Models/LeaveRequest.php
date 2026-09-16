@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Constants\AppConstants;
 use App\Enums\RequestStatus;
 use App\Enums\RequestType;
 use Carbon\CarbonPeriod;
@@ -53,8 +54,10 @@ class LeaveRequest extends Model
 
     /**
      * Count of weekdays (Mon–Fri) between start_date and end_date, inclusive.
+     * When a time range is set the request is partial-day: each weekday counts
+     * as hours/STANDARD_HOURS of a day (capped at 1).
      */
-    public function totalDays(): int
+    public function totalDays(): float
     {
         $days = 0;
 
@@ -64,7 +67,17 @@ class LeaveRequest extends Model
             }
         }
 
-        return $days;
+        if ($days > 0 && $this->start_time && $this->end_time) {
+            $hours = $this->hours ?? round(
+                (strtotime((string) $this->end_time) - strtotime((string) $this->start_time)) / 3600,
+                2
+            );
+            $fraction = min(max((float) $hours, 0), AppConstants::STANDARD_HOURS) / AppConstants::STANDARD_HOURS;
+
+            return round($days * $fraction, 2);
+        }
+
+        return (float) $days;
     }
 
     public function isPending(): bool

@@ -4,6 +4,7 @@ import {
   Avatar,
   EmptyState,
   Loading,
+  Modal,
   StatusBadge,
   Tabs,
   TypeChip,
@@ -32,6 +33,9 @@ const reqMetaCls = 'text-[13px] text-[#7a8499]';
 const reqMetaDangerCls = 'text-[13px] text-[#ef4b4b]';
 const reqDatesCls = 'font-semibold';
 const reqActionsCls = 'mt-1 flex gap-2 border-t border-[#e6e9f2] pt-3';
+const labelCls = 'mb-1.5 block text-[13px] font-semibold text-[#1a2233]';
+const inputCls = `${formSelectCls} min-h-[80px] resize-y`;
+const btnSecondaryCls = `${btnCls} border-[#e6e9f2] bg-white text-[#1a2233] enabled:hover:border-[#d5dbe8] enabled:hover:bg-[#f6f8fc]`;
 
 // Constants may be { key: { label } } maps or arrays of { value, label }.
 const toOptions = (c) =>
@@ -85,27 +89,35 @@ export default function ApprovalsPage() {
     loadRequests();
   }, [loadRequests]);
 
-  const handleApprove = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn duyệt đơn này?')) return;
-    setBusy(true);
-    try {
-      const res = await requestApi.approve(id);
-      toast.success(res?.data?.message ?? res?.message ?? 'Đã duyệt đơn');
-      loadRequests();
-    } catch (err) {
-      toast.error(extractError(err));
-    } finally {
-      setBusy(false);
-    }
+  // Action modal: { kind: 'approve' | 'reject', request } or null.
+  const [action, setAction] = useState(null);
+  const [reason, setReason] = useState('');
+
+  const openAction = (kind, request) => {
+    setAction({ kind, request });
+    setReason('');
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt('Lý do từ chối:');
-    if (reason === null) return;
+  const closeAction = () => {
+    setAction(null);
+    setReason('');
+  };
+
+  const submitAction = async (e) => {
+    e?.preventDefault();
+    if (!action || busy) return;
     setBusy(true);
     try {
-      const res = await requestApi.reject(id, reason);
-      toast.success(res?.data?.message ?? res?.message ?? 'Đã từ chối đơn');
+      const res =
+        action.kind === 'approve'
+          ? await requestApi.approve(action.request.id)
+          : await requestApi.reject(action.request.id, reason);
+      toast.success(
+        res?.data?.message ??
+          res?.message ??
+          (action.kind === 'approve' ? 'Đã duyệt đơn' : 'Đã từ chối đơn')
+      );
+      closeAction();
       loadRequests();
     } catch (err) {
       toast.error(extractError(err));
@@ -163,7 +175,7 @@ export default function ApprovalsPage() {
               <div className={reqDatesCls}>
                 {fmtDate(r.start_date)} → {fmtDate(r.end_date)}
               </div>
-              {r.type === 'ot' && (
+              {r.start_time && r.end_time && (
                 <div className={reqMetaCls}>
                   {fmtTime(r.start_time)}–{fmtTime(r.end_time)}
                   {r.hours != null && ` · ${r.hours}h`}
@@ -186,7 +198,7 @@ export default function ApprovalsPage() {
                     type="button"
                     className={btnSuccessCls}
                     disabled={busy}
-                    onClick={() => handleApprove(r.id)}
+                    onClick={() => openAction('approve', r)}
                   >
                     Duyệt
                   </button>
@@ -194,7 +206,7 @@ export default function ApprovalsPage() {
                     type="button"
                     className={btnDangerCls}
                     disabled={busy}
-                    onClick={() => handleReject(r.id)}
+                    onClick={() => openAction('reject', r)}
                   >
                     Từ chối
                   </button>
@@ -204,6 +216,82 @@ export default function ApprovalsPage() {
           ))}
         </div>
       )}
+
+      {/* Approve / Reject modal */}
+      <Modal
+        open={!!action}
+        onClose={closeAction}
+        title={
+          action?.kind === 'approve' ? 'Xác nhận duyệt đơn' : 'Từ chối đơn'
+        }
+      >
+        {action && (
+          <form onSubmit={submitAction}>
+            {/* Request summary */}
+            <div className="mb-4 rounded-[10px] border border-[#e6e9f2] bg-[#f8fafd] p-3">
+              <div className="flex items-center gap-2">
+                <Avatar name={action.request.user?.name} sm />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold">
+                    {action.request.user?.name || '—'}
+                  </div>
+                  <div className={reqMetaCls}>
+                    {fmtDate(action.request.start_date)} →{' '}
+                    {fmtDate(action.request.end_date)}
+                    {action.request.start_time &&
+                      action.request.end_time &&
+                      ` · ${fmtTime(action.request.start_time)}–${fmtTime(action.request.end_time)}`}
+                  </div>
+                </div>
+                <TypeChip type={action.request.type} />
+              </div>
+              {action.request.reason && (
+                <div className={`${reqMetaCls} mt-2`}>
+                  {action.request.reason}
+                </div>
+              )}
+            </div>
+
+            {action.kind === 'reject' && (
+              <div className="mb-3.5">
+                <label className={labelCls}>Lý do từ chối *</label>
+                <textarea
+                  className={inputCls}
+                  placeholder="Nhập lý do từ chối..."
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  required
+                  minLength={3}
+                  autoFocus
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className={btnSecondaryCls}
+                onClick={closeAction}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className={
+                  action.kind === 'approve' ? btnSuccessCls : btnDangerCls
+                }
+                disabled={busy}
+              >
+                {busy
+                  ? 'Đang xử lý...'
+                  : action.kind === 'approve'
+                    ? 'Xác nhận duyệt'
+                    : 'Xác nhận từ chối'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

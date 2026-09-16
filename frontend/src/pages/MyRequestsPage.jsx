@@ -157,9 +157,11 @@ export default function MyRequestsPage() {
         end_date: form.end_date,
         reason: form.reason,
       };
-      if (form.type === 'ot') {
+      if (form.start_time && form.end_time) {
         payload.start_time = form.start_time;
         payload.end_time = form.end_time;
+      }
+      if (form.type === 'ot') {
         payload.hours = Number(form.hours);
       }
       const res = await requestApi.create(payload);
@@ -235,7 +237,7 @@ export default function MyRequestsPage() {
               <div className="font-semibold">
                 {fmtDate(r.start_date)} → {fmtDate(r.end_date)}
               </div>
-              {r.type === 'ot' && (
+              {r.start_time && r.end_time && (
                 <div className={reqMetaCls}>
                   {fmtTime(r.start_time)}–{fmtTime(r.end_time)}
                   {r.hours != null && ` · ${r.hours}h`}
@@ -296,52 +298,65 @@ export default function MyRequestsPage() {
               required
             />
           </div>
+          <div className="mb-3.5 grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>
+                Giờ bắt đầu{form.type !== 'ot' && ' (tùy chọn)'}
+              </label>
+              <input
+                type="time"
+                className={inputCls}
+                name="start_time"
+                value={form.start_time}
+                onChange={onChange}
+                required={form.type === 'ot'}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>
+                Giờ kết thúc{form.type !== 'ot' && ' (tùy chọn)'}
+              </label>
+              <input
+                type="time"
+                className={inputCls}
+                name="end_time"
+                value={form.end_time}
+                onChange={onChange}
+                required={form.type === 'ot'}
+              />
+            </div>
+          </div>
+          {form.type !== 'ot' && (
+            <p className="-mt-2 mb-3.5 text-xs text-[#7a8499]">
+              Để trống nếu {form.type === 'off' ? 'nghỉ' : 'remote'} cả ngày.
+              {form.type === 'off' && ' Có giờ = nghỉ theo giờ, phép trừ tương ứng.'}
+            </p>
+          )}
           {form.type === 'ot' && (
-            <>
-              <div className="mb-3.5">
-                <label className={labelCls}>Giờ bắt đầu</label>
-                <input
-                  type="time"
-                  className={inputCls}
-                  name="start_time"
-                  value={form.start_time}
-                  onChange={onChange}
-                  required
-                />
-              </div>
-              <div className="mb-3.5">
-                <label className={labelCls}>Giờ kết thúc</label>
-                <input
-                  type="time"
-                  className={inputCls}
-                  name="end_time"
-                  value={form.end_time}
-                  onChange={onChange}
-                  required
-                />
-              </div>
-              <div className="mb-3.5">
-                <label className={labelCls}>Số giờ</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  className={inputCls}
-                  name="hours"
-                  value={form.hours}
-                  onChange={onChange}
-                  required
-                />
-              </div>
-            </>
+            <div className="mb-3.5">
+              <label className={labelCls}>Số giờ OT</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                className={inputCls}
+                name="hours"
+                value={form.hours}
+                onChange={onChange}
+                required
+              />
+            </div>
           )}
           <div className="mb-3.5">
-            <label className={labelCls}>Lý do</label>
+            <label className={labelCls}>Lý do *</label>
             <textarea
               className={`${inputCls} min-h-[80px] resize-y`}
               name="reason"
+              placeholder="Nhập lý do chi tiết..."
               value={form.reason}
               onChange={onChange}
+              required
+              minLength={3}
             />
           </div>
           <div className="flex items-center justify-end gap-2">

@@ -72,9 +72,16 @@ class LeaveRequestService
             'status' => RequestStatus::Pending,
         ];
 
-        if ($data['type'] === RequestType::Ot->value) {
+        // Time range is stored for every request type: required for OT,
+        // optional for off/remote (partial-day). hours is taken verbatim for
+        // OT; for other types it's derived from the time range when absent.
+        if (! empty($data['start_time']) && ! empty($data['end_time'])) {
             $attributes['start_time'] = $data['start_time'];
             $attributes['end_time'] = $data['end_time'];
+            $attributes['hours'] = $data['type'] === RequestType::Ot->value
+                ? $data['hours']
+                : ($data['hours'] ?? round((strtotime($data['end_time']) - strtotime($data['start_time'])) / 3600, 2));
+        } elseif ($data['type'] === RequestType::Ot->value) {
             $attributes['hours'] = $data['hours'];
         }
 
