@@ -1,0 +1,29 @@
+# ===== Secrets / environment =====
+.env
+.env.*
+!.env.example
+
+# ===== Dependencies / build artifacts (safety net; per-dir rules cover this too) =====
+node_modules/
+vendor/
+dist/
+
+# ===== Docker =====
+docker-compose.override.yml
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Editor / IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== OS junk =====
+.DS_Store
+Thumbs.db
+
+# ===== Misc =====
+.mount-test
