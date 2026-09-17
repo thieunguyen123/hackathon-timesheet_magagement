@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Enums\RequestType;
 use App\Models\LeaveRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -20,26 +19,21 @@ class LeaveRequestRejected extends Notification
 
     public function toArray(object $notifiable): array
     {
-        $message = "Đơn {$this->typeLabel()} của bạn đã bị từ chối";
+        $message = __('notifications.leave_request.rejected', [
+            'type' => $this->request->type->shortLabel(),
+        ]);
 
         if (! empty($this->request->reject_reason)) {
-            $message .= ". Lý do: {$this->request->reject_reason}";
+            $message .= __('notifications.leave_request.rejected_reason', [
+                'reason' => $this->request->reject_reason,
+            ]);
         }
 
         return [
-            'title' => 'Đơn bị từ chối',
+            'title' => __('notifications.leave_request.rejected_title'),
             'message' => $message,
             'link' => '/requests',
             'request_id' => $this->request->id,
         ];
-    }
-
-    private function typeLabel(): string
-    {
-        return match ($this->request->type) {
-            RequestType::Off => 'nghỉ phép',
-            RequestType::Remote => 'remote',
-            RequestType::Ot => 'OT',
-        };
     }
 }

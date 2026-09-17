@@ -8,7 +8,9 @@ use App\Http\Requests\StoreLeaveRequestRequest;
 use App\Http\Resources\LeaveRequestResource;
 use App\Models\LeaveRequest;
 use App\Services\LeaveRequestService;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class LeaveRequestController extends Controller
@@ -35,23 +37,23 @@ class LeaveRequestController extends Controller
     {
         $leaveRequest = $this->leaveRequestService->create($request->user(), $request->validated());
 
-        return response()->json([
-            'message' => 'Tạo đơn thành công',
-            'data' => new LeaveRequestResource($leaveRequest),
-        ], 201);
+        return ApiResponse::created(
+            new LeaveRequestResource($leaveRequest),
+            __('messages.leave_request.created'),
+        );
     }
 
     /**
      * Approve a pending request.
      */
-    public function approve(LeaveRequest $leaveRequest): JsonResponse
+    public function approve(Request $request, LeaveRequest $leaveRequest): JsonResponse
     {
-        $leaveRequest = $this->leaveRequestService->approve(request()->user(), $leaveRequest);
+        $leaveRequest = $this->leaveRequestService->approve($request->user(), $leaveRequest);
 
-        return response()->json([
-            'message' => 'Đã duyệt đơn',
-            'data' => new LeaveRequestResource($leaveRequest),
-        ]);
+        return ApiResponse::success(
+            new LeaveRequestResource($leaveRequest),
+            __('messages.leave_request.approved'),
+        );
     }
 
     /**
@@ -65,9 +67,9 @@ class LeaveRequestController extends Controller
             (string) $request->validated('reject_reason'),
         );
 
-        return response()->json([
-            'message' => 'Đã từ chối đơn',
-            'data' => new LeaveRequestResource($leaveRequest),
-        ]);
+        return ApiResponse::success(
+            new LeaveRequestResource($leaveRequest),
+            __('messages.leave_request.rejected'),
+        );
     }
 }

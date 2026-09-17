@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\NotificationResource;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,21 +19,12 @@ class NotificationController extends Controller
         $notifications = $user->notifications()
             ->latest()
             ->limit(20)
-            ->get()
-            ->map(fn ($n) => [
-                'id' => $n->id,
-                'title' => $n->data['title'] ?? '',
-                'message' => $n->data['message'] ?? '',
-                'link' => $n->data['link'] ?? '/',
-                'request_id' => $n->data['request_id'] ?? null,
-                'read_at' => $n->read_at,
-                'created_at' => $n->created_at,
-            ]);
+            ->get();
 
-        return response()->json([
-            'data' => $notifications,
-            'unread_count' => $user->unreadNotifications()->count(),
-        ]);
+        return ApiResponse::success(
+            NotificationResource::collection($notifications),
+            extra: ['unread_count' => $user->unreadNotifications()->count()],
+        );
     }
 
     /**
@@ -39,7 +32,7 @@ class NotificationController extends Controller
      */
     public function unreadCount(Request $request): JsonResponse
     {
-        return response()->json([
+        return ApiResponse::success(extra: [
             'count' => $request->user()->unreadNotifications()->count(),
         ]);
     }
@@ -56,7 +49,7 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
-        return response()->json(['ok' => true]);
+        return ApiResponse::success(extra: ['ok' => true]);
     }
 
     /**
@@ -66,6 +59,6 @@ class NotificationController extends Controller
     {
         $request->user()->unreadNotifications->markAsRead();
 
-        return response()->json(['ok' => true]);
+        return ApiResponse::success(extra: ['ok' => true]);
     }
 }

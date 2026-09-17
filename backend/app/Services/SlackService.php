@@ -26,17 +26,20 @@ class SlackService
             return;
         }
 
-        $text = ":memo: *Đơn mới cần duyệt*\n"
-            ."• Nhân viên: {$leaveRequest->user->name}\n"
-            ."• Loại: {$leaveRequest->type->label()}\n"
-            ."• Thời gian: {$leaveRequest->start_date->format('d/m/Y')} → {$leaveRequest->end_date->format('d/m/Y')}";
+        $text = __('notifications.slack.new_request')
+            ."\n".__('notifications.slack.employee', ['name' => $leaveRequest->user->name])
+            ."\n".__('notifications.slack.type', ['type' => $leaveRequest->type->label()])
+            ."\n".__('notifications.slack.period', [
+                'from' => $leaveRequest->start_date->format('d/m/Y'),
+                'to' => $leaveRequest->end_date->format('d/m/Y'),
+            ]);
 
         if ($leaveRequest->type === RequestType::Ot) {
-            $text .= "\n• Số giờ OT: {$leaveRequest->hours}";
+            $text .= "\n".__('notifications.slack.ot_hours', ['hours' => $leaveRequest->hours]);
         }
 
         if (! empty($leaveRequest->reason)) {
-            $text .= "\n• Lý do: {$leaveRequest->reason}";
+            $text .= "\n".__('notifications.slack.reason', ['reason' => $leaveRequest->reason]);
         }
 
         try {

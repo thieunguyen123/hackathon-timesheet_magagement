@@ -16,4 +16,13 @@ enum RequestType: string
             self::Ot => 'Làm thêm giờ (OT)',
         };
     }
+
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::Off => 'nghỉ phép',
+            self::Remote => 'remote',
+            self::Ot => 'OT',
+        };
+    }
 }

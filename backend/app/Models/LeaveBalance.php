@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\LeaveAccrualService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,9 +38,11 @@ class LeaveBalance extends Model
         return $this->belongsTo(User::class);
     }
 
-    protected function getRemainingAttribute(): float
+    protected function remaining(): Attribute
     {
-        return max(0, (float) $this->total_days - (float) $this->used_days);
+        return Attribute::make(
+            get: fn () => max(0, (float) $this->total_days - (float) $this->used_days)
+        );
     }
 
     public function scopeForYear(Builder $query, int $year): Builder

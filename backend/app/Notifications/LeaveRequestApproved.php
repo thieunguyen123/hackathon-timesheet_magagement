@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Enums\RequestType;
 use App\Models\LeaveRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -20,22 +19,16 @@ class LeaveRequestApproved extends Notification
 
     public function toArray(object $notifiable): array
     {
-        $approver = $this->request->approver?->name ?? 'quản lý';
+        $approver = $this->request->approver?->name ?? __('notifications.leave_request.approver_fallback');
 
         return [
-            'title' => 'Đơn đã được duyệt',
-            'message' => "Đơn {$this->typeLabel()} của bạn đã được {$approver} duyệt",
+            'title' => __('notifications.leave_request.approved_title'),
+            'message' => __('notifications.leave_request.approved', [
+                'type' => $this->request->type->shortLabel(),
+                'approver' => $approver,
+            ]),
             'link' => '/requests',
             'request_id' => $this->request->id,
         ];
-    }
-
-    private function typeLabel(): string
-    {
-        return match ($this->request->type) {
-            RequestType::Off => 'nghỉ phép',
-            RequestType::Remote => 'remote',
-            RequestType::Ot => 'OT',
-        };
     }
 }

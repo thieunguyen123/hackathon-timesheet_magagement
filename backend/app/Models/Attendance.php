@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,5 +35,23 @@ class Attendance extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function scopeForUsers(Builder $q, array $userIds): Builder
+    {
+        return $q->whereIn('user_id', $userIds);
+    }
+
+    public function scopeBetweenDates(Builder $q, CarbonInterface|string $start, CarbonInterface|string $end): Builder
+    {
+        return $q->whereBetween('date', [
+            $start instanceof CarbonInterface ? $start->toDateString() : $start,
+            $end instanceof CarbonInterface ? $end->toDateString() : $end,
+        ]);
+    }
+
+    public function scopeToday(Builder $q): Builder
+    {
+        return $q->whereDate('date', today());
     }
 }

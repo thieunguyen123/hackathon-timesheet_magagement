@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -33,10 +34,10 @@ class UserController extends Controller
     {
         $user = $this->userService->create($request->validated());
 
-        return response()->json([
-            'message' => 'Tạo nhân viên thành công',
-            'data' => new UserResource($user),
-        ], 201);
+        return ApiResponse::created(
+            new UserResource($user),
+            __('messages.user.created'),
+        );
     }
 
     /**
@@ -49,7 +50,7 @@ class UserController extends Controller
             'leaveBalances' => fn ($query) => $query->where('year', now()->year),
         ]);
 
-        return response()->json(['data' => new UserResource($user)]);
+        return ApiResponse::success(new UserResource($user));
     }
 
     /**
@@ -59,10 +60,10 @@ class UserController extends Controller
     {
         $user = $this->userService->update($request->user(), $user, $request->validated());
 
-        return response()->json([
-            'message' => 'Cập nhật thành công',
-            'data' => new UserResource($user),
-        ]);
+        return ApiResponse::success(
+            new UserResource($user),
+            __('messages.user.updated'),
+        );
     }
 
     /**
@@ -72,7 +73,7 @@ class UserController extends Controller
     {
         $this->userService->delete($request->user(), $user);
 
-        return response()->json(['message' => 'Đã xóa nhân viên']);
+        return ApiResponse::message(__('messages.user.deleted'));
     }
 
     /**
@@ -81,8 +82,8 @@ class UserController extends Controller
      */
     public function team(Request $request): JsonResponse
     {
-        return response()->json([
-            'data' => UserResource::collection($this->userService->teamFor($request->user())),
-        ]);
+        return ApiResponse::success(
+            UserResource::collection($this->userService->teamFor($request->user()))
+        );
     }
 }

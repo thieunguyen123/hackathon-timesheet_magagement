@@ -2,7 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\Role;
+use App\Exceptions\ForbiddenException;
+use App\Exceptions\UnauthorizedException;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,13 +20,11 @@ class RoleMiddleware
         $user = $request->user();
 
         if (! $user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            throw new UnauthorizedException();
         }
 
-        $role = $user->role instanceof Role ? $user->role->value : (string) $user->role;
-
-        if (! in_array($role, $roles, true)) {
-            return response()->json(['message' => 'Bạn không có quyền truy cập'], 403);
+        if (! $user->hasRole(...$roles)) {
+            throw new ForbiddenException();
         }
 
         return $next($request);

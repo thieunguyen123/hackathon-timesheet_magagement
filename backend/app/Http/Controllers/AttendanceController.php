@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\IndexAttendanceRequest;
 use App\Http\Resources\AttendanceResource;
 use App\Services\AttendanceService;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
 class AttendanceController extends Controller
@@ -19,17 +20,17 @@ class AttendanceController extends Controller
             $request->filled('user_id') ? (int) $request->input('user_id') : null,
         );
 
-        return response()->json([
-            'data' => AttendanceResource::collection($result['items']),
-            'summary' => $result['summary'],
-        ]);
+        return ApiResponse::success(
+            AttendanceResource::collection($result['items']),
+            extra: ['summary' => $result['summary']],
+        );
     }
 
     public function sync(): JsonResponse
     {
-        return response()->json([
-            'message' => 'Đồng bộ chấm công thành công',
-            'synced' => $this->attendanceService->sync(),
-        ]);
+        return ApiResponse::message(
+            __('messages.attendance.sync_success'),
+            ['synced' => $this->attendanceService->sync()],
+        );
     }
 }

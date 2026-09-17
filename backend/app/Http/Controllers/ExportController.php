@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ArrayExport;
 use App\Http\Requests\ExportRequestsRequest;
 use App\Http\Requests\ExportTimesheetRequest;
 use App\Models\Attendance;
 use App\Models\LeaveRequest;
-use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use App\Support\DateHelper;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -21,10 +20,10 @@ class ExportController extends Controller
     public function timesheet(ExportTimesheetRequest $request): BinaryFileResponse
     {
         $month = $request->validated('month');
-        if (! is_string($month) || ! preg_match('/^\d{4}-\d{2}$/', $month)) {
-            $month = now()->format('Y-m');
-        }
-        [$year, $mon] = explode('-', $month);
+        [$start] = DateHelper::monthRange(is_string($month) ? $month : null);
+        $year = $start->year;
+        $mon = $start->month;
+        $month = $start->format('Y-m');
 
         $rows = Attendance::with('user:id,name,email')
             ->whereYear('date', $year)
@@ -43,20 +42,7 @@ class ExportController extends Controller
             ])
             ->all();
 
-        $export = new class($rows) implements FromArray, WithHeadings, ShouldAutoSize
-        {
-            public function __construct(private array $rows) {}
-
-            public function array(): array
-            {
-                return $this->rows;
-            }
-
-            public function headings(): array
-            {
-                return ['Nhân viên', 'Email', 'Ngày', 'Check-in', 'Check-out', 'Số giờ', 'Nguồn'];
-            }
-        };
+        $export = new ArrayExport($rows, ['Nhân viên', 'Email', 'Ngày', 'Check-in', 'Check-out', 'Số giờ', 'Nguồn']);
 
         return Excel::download($export, "bang-cong-{$month}.xlsx");
     }
@@ -95,20 +81,7 @@ class ExportController extends Controller
             ])
             ->all();
 
-        $export = new class($rows) implements FromArray, WithHeadings, ShouldAutoSize
-        {
-            public function __construct(private array $rows) {}
-
-            public function array(): array
-            {
-                return $this->rows;
-            }
-
-            public function headings(): array
-            {
-                return ['Nhân viên', 'Loại đơn', 'Từ ngày', 'Đến ngày', 'Số giờ OT', 'Lý do', 'Trạng thái', 'Người duyệt'];
-            }
-        };
+        $export = new ArrayExport($rows, ['Nhân viên', 'Loại đơn', 'Từ ngày', 'Đến ngày', 'Số giờ OT', 'Lý do', 'Trạng thái', 'Người duyệt']);
 
         return Excel::download($export, 'don-tu.xlsx');
     }

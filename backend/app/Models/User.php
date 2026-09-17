@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Constants\AppConstants;
+use App\Enums\Gender;
 use App\Enums\Role;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -35,6 +37,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'gender' => Gender::class,
             'password' => 'hashed',
             'role' => Role::class,
             'start_date' => 'date',
@@ -78,7 +81,7 @@ class User extends Authenticatable
 
     public function isFemale(): bool
     {
-        return $this->gender === 'female';
+        return $this->gender === Gender::Female;
     }
 
     public function annualLeaveCap(): float
@@ -119,5 +122,29 @@ class User extends Authenticatable
         }
 
         return [$this->id];
+    }
+
+    public function scopeRole(Builder $query, Role|string $role): Builder
+    {
+        return $query->where('role', $role instanceof Role ? $role->value : $role);
+    }
+
+    public function scopeAdmins(Builder $query): Builder
+    {
+        return $this->scopeRole($query, Role::Admin);
+    }
+
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        if ($term === null || trim($term) === '') {
+            return $query;
+        }
+
+        $like = '%'.trim($term).'%';
+
+        return $query->where(function (Builder $q) use ($like) {
+            $q->where('name', 'like', $like)
+                ->orWhere('email', 'like', $like);
+        });
     }
 }

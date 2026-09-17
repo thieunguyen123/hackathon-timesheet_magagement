@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\RequestStatus;
 use App\Enums\RequestType;
+use App\Exceptions\BusinessException;
+use App\Exceptions\ForbiddenException;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\User;
@@ -35,20 +37,14 @@ class LeaveRequestService
         $userId = isset($filters['user_id']) ? (int) $filters['user_id'] : null;
 
         if ($userId !== null && ! in_array($userId, $allowedIds)) {
-            abort(403, 'Không có quyền xem đơn của nhân viên này');
+            throw new ForbiddenException(__('messages.leave_request.forbidden_view'));
         }
 
         $query = LeaveRequest::with(['user:id,name,email', 'approver:id,name'])
-            ->whereIn('user_id', $allowedIds)
-            ->latest();
-
-        if (! empty($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
+            ->forUsers($allowedIds)
+            ->latest()
+            ->when(! empty($filters['type']), fn ($q) => $q->ofType($filters['type']))
+            ->when(! empty($filters['status']), fn ($q) => $q->status($filters['status']));
 
         if ($userId !== null) {
             $query->where('user_id', $userId);
@@ -90,7 +86,7 @@ class LeaveRequestService
         app(SlackService::class)->notifyNewRequest($leaveRequest->load('user'));
 
         try {
-            $recipients = User::where('role', 'admin')->get();
+            $recipients = User::admins()->get();
 
             if ($manager = $leaveRequest->user->manager) {
                 $recipients->push($manager);
@@ -167,18 +163,18 @@ class LeaveRequestService
     private function authorizeAction(User $actor, LeaveRequest $leaveRequest): void
     {
         if ($leaveRequest->user_id === $actor->id) {
-            abort(403, 'Không thể tự duyệt đơn của mình');
+            throw new ForbiddenException(__('messages.leave_request.forbidden_self_action'));
         }
 
         $allowed = $actor->isAdmin()
             || ($actor->isManager() && in_array($leaveRequest->user_id, $actor->teamIds()));
 
         if (! $allowed) {
-            abort(403, 'Không có quyền duyệt đơn này');
+            throw new ForbiddenException(__('messages.leave_request.forbidden_action'));
         }
 
         if (! $leaveRequest->isPending()) {
-            abort(422, 'Đơn đã được xử lý');
+            throw new BusinessException(__('messages.leave_request.already_processed'));
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Constants\AppConstants;
+use App\Exceptions\ForbiddenException;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Support\DateHelper;
@@ -24,7 +25,7 @@ class AttendanceService
 
         if ($userId !== null) {
             if (! in_array($userId, $allowedIds, true)) {
-                abort(403, 'Bạn không có quyền xem nhân viên này');
+                throw new ForbiddenException(__('messages.attendance.forbidden_view'));
             }
 
             $userIds = [$userId];
@@ -32,12 +33,14 @@ class AttendanceService
             $userIds = $allowedIds;
         }
 
-        $items = Attendance::with('user:id,name')
-            ->whereIn('user_id', $userIds)
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+        $fetch = fn () => Attendance::with('user:id,name')
+            ->forUsers($userIds)
+            ->betweenDates($start, $end)
             ->orderBy('date')
             ->orderBy('user_id')
             ->get();
+
+        $items = $fetch();
 
         // No records and no Connecteam configured -> generate demo data so
         // the attendance page is never empty, then re-query.
@@ -48,12 +51,7 @@ class AttendanceService
                 // Demo generation failed — continue and return empty data.
             }
 
-            $items = Attendance::with('user:id,name')
-                ->whereIn('user_id', $userIds)
-                ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-                ->orderBy('date')
-                ->orderBy('user_id')
-                ->get();
+            $items = $fetch();
         }
 
         return [

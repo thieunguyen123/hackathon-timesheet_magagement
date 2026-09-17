@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Constants\AppConstants;
+use App\Exceptions\ExternalServiceException;
 use App\Models\Attendance;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
 use Throwable;
 
 class ConnecteamService
@@ -83,7 +83,9 @@ class ConnecteamService
         );
 
         if (! $response->successful()) {
-            throw new RuntimeException('Connecteam API error: '.$response->status());
+            throw new ExternalServiceException(
+                __('messages.integration.connecteam_error', ['status' => $response->status()])
+            );
         }
 
         // NOTE: the exact payload shape should be verified against Connecteam API docs.

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Constants\AppConstants;
 use App\Enums\Role;
+use App\Exceptions\BusinessException;
+use App\Exceptions\ForbiddenException;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -18,14 +20,9 @@ class UserService
     {
         return User::with('manager:id,name')
             ->when($filters['role'] ?? null, function ($query, $role) {
-                $query->where('role', $role);
+                $query->role($role);
             })
-            ->when($filters['q'] ?? null, function ($query, $term) {
-                $query->where(function ($sub) use ($term) {
-                    $sub->where('name', 'like', "%{$term}%")
-                        ->orWhere('email', 'like', "%{$term}%");
-                });
-            })
+            ->search($filters['q'] ?? null)
             ->orderBy('name')
             ->paginate(15);
     }
@@ -54,7 +51,7 @@ class UserService
         $currentRole = $target->role instanceof Role ? $target->role->value : $target->role;
 
         if ($target->id === $actor->id && isset($data['role']) && $data['role'] !== $currentRole) {
-            abort(422, 'Không thể đổi quyền của chính mình');
+            throw new BusinessException(__('messages.user.forbidden_self_role'));
         }
 
         if (! empty($data['password'])) {
@@ -74,7 +71,7 @@ class UserService
     public function delete(User $actor, User $target): void
     {
         if ($target->id === $actor->id) {
-            abort(422, 'Không thể xóa chính mình');
+            throw new BusinessException(__('messages.user.forbidden_self_delete'));
         }
 
         $target->delete();
@@ -85,7 +82,7 @@ class UserService
      */
     public function teamFor(User $user): Collection
     {
-        $columns = ['id', 'name', 'email', 'role', 'manager_id'];
+        $columns = ['id', 'name', 'email', 'role', 'gender', 'manager_id'];
 
         if ($user->isAdmin()) {
             return User::orderBy('name')->get($columns);
@@ -100,6 +97,6 @@ class UserService
                 ->values();
         }
 
-        abort(403);
+        throw new ForbiddenException();
     }
 }

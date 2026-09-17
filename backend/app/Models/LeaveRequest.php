@@ -89,4 +89,19 @@ class LeaveRequest extends Model
     {
         return $query->where('status', RequestStatus::Pending->value);
     }
+
+    public function scopeStatus(Builder $q, RequestStatus|string $status): Builder
+    {
+        return $q->where('status', $status instanceof RequestStatus ? $status->value : $status);
+    }
+
+    public function scopeOfType(Builder $q, RequestType|string $type): Builder
+    {
+        return $q->where('type', $type instanceof RequestType ? $type->value : $type);
+    }
+
+    public function scopeForUsers(Builder $q, array $userIds): Builder
+    {
+        return $q->whereIn('user_id', $userIds);
+    }
 }

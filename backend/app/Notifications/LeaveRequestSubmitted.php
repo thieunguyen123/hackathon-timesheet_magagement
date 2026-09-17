@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Enums\RequestType;
 use App\Models\LeaveRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -24,19 +23,14 @@ class LeaveRequestSubmitted extends Notification
             .' - '.$this->request->end_date->format('d/m/Y');
 
         return [
-            'title' => 'Đơn mới cần duyệt',
-            'message' => "{$this->request->user->name} đã gửi đơn {$this->typeLabel()} ({$dateRange})",
+            'title' => __('notifications.leave_request.submitted_title'),
+            'message' => __('notifications.leave_request.submitted', [
+                'name' => $this->request->user->name,
+                'type' => $this->request->type->shortLabel(),
+                'range' => $dateRange,
+            ]),
             'link' => '/approvals',
             'request_id' => $this->request->id,
         ];
-    }
-
-    private function typeLabel(): string
-    {
-        return match ($this->request->type) {
-            RequestType::Off => 'nghỉ phép',
-            RequestType::Remote => 'remote',
-            RequestType::Ot => 'OT',
-        };
     }
 }

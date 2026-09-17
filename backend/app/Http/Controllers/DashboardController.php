@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,8 +17,6 @@ class DashboardController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        return response()->json([
-            'data' => $this->dashboardService->statsFor($request->user()),
-        ]);
+        return ApiResponse::success($this->dashboardService->statsFor($request->user()));
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\RequestStatus;
 use App\Enums\Role;
 use App\Models\Attendance;
 use App\Models\LeaveBalance;
@@ -33,17 +32,17 @@ class DashboardService
                 ->whereMonth('date', $now->month)
                 ->count(),
             'pending_requests' => $user->leaveRequests()
-                ->where('status', RequestStatus::Pending)
+                ->pending()
                 ->count(),
-            'leave_remaining' => LeaveBalance::for($user, $now->year)?->remaining ?? 0,
+            'leave_remaining' => LeaveBalance::for($user, $now->year)->remaining,
         ];
 
         if ($user->isManager()) {
             $subordinateIds = $user->subordinates()->pluck('id');
 
             $data['team_size'] = $subordinateIds->count();
-            $data['team_pending'] = LeaveRequest::whereIn('user_id', $subordinateIds)
-                ->where('status', RequestStatus::Pending)
+            $data['team_pending'] = LeaveRequest::forUsers($subordinateIds->all())
+                ->pending()
                 ->count();
         }
 
@@ -56,9 +55,9 @@ class DashboardService
                 ]);
 
             $data['total_users'] = User::count();
-            $data['total_managers'] = User::where('role', Role::Manager)->count();
-            $data['today_present'] = Attendance::whereDate('date', today())->count();
-            $data['pending_total'] = LeaveRequest::where('status', RequestStatus::Pending)->count();
+            $data['total_managers'] = User::role(Role::Manager)->count();
+            $data['today_present'] = Attendance::today()->count();
+            $data['pending_total'] = LeaveRequest::pending()->count();
             $data['requests_by_status'] = [
                 'pending' => (int) ($byStatus['pending'] ?? 0),
                 'approved' => (int) ($byStatus['approved'] ?? 0),
